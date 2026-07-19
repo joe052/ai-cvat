@@ -432,6 +432,7 @@ volumes:
 
 networks:
   cvat:
+   name: cvat
   # Dokploy's shared proxy network. Created by Dokploy on install; declared
   # external here so this stack joins it instead of trying to create it.
   dokploy-network:
