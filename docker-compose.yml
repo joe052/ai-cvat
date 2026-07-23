@@ -86,6 +86,9 @@ services:
   cvat_server:
     container_name: cvat_server
     image: cvat/server:${CVAT_VERSION:-dev}
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: always
     depends_on:
       <<: *backend-deps
@@ -251,6 +254,9 @@ services:
   cvat_ui:
     container_name: cvat_ui
     image: cvat/ui:${CVAT_VERSION:-dev}
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
     restart: always
     depends_on:
       - cvat_server
@@ -266,9 +272,9 @@ services:
     image: traefik:v3.6
     container_name: traefik
     restart: always
-    ports:
-      - 8080:8080
-      - 8090:8090
+    # Host port publishing removed for Dokploy. Dokploy's own Traefik reaches
+    # this container over dokploy-network at port 8080 (the `web` entrypoint),
+    # so there is no need — and it is harmful — to publish 8080/8090 on the host.
     environment:
       CVAT_HOST: ${CVAT_HOST:-localhost}
       DJANGO_LOG_VIEWER_HOST: grafana
@@ -290,6 +296,7 @@ services:
 
       TRAEFIK_LOG_FORMAT: json
       TRAEFIK_ENTRYPOINTS_web_ADDRESS: :8080
+      TRAEFIK_ENTRYPOINTS_web_FORWARDEDHEADERS_INSECURE: "true"
       TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: "false"
       TRAEFIK_PROVIDERS_DOCKER_NETWORK: cvat
       TRAEFIK_PROVIDERS_FILE_DIRECTORY: /etc/traefik/rules
@@ -306,6 +313,7 @@ services:
       - ./components/analytics/grafana_conf.yml:/etc/traefik/rules/grafana_conf.yml:ro
     networks:
       - cvat
+      - dokploy-network
     logging:
       driver: "json-file"
       options:
@@ -431,3 +439,8 @@ volumes:
 
 networks:
   cvat:
+   name: cvat
+  # Dokploy's shared proxy network. Created by Dokploy on install; declared
+  # external here so this stack joins it instead of trying to create it.
+  dokploy-network:
+    external: true
